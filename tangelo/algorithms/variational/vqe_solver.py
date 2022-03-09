@@ -29,7 +29,7 @@ from tangelo.linq.helpers.circuits.measurement_basis import measurement_basis_ga
 from tangelo.toolboxes.operators import count_qubits, FermionOperator, qubitop_to_qubitham
 from tangelo.toolboxes.qubit_mappings.mapping_transform import fermion_to_qubit_mapping
 from tangelo.toolboxes.ansatz_generator.ansatz import Ansatz
-from tangelo.toolboxes.ansatz_generator import UCCSD, RUCC, HEA, UpCCGSD, QMF, QCC, VSQS, VariationalCircuitAnsatz
+from tangelo.toolboxes.ansatz_generator import UCCSD, RUCC, HEA, UpCCGSD, QMF, QCC, VSQS, VariationalCircuitAnsatz, SymmetricHEA
 from tangelo.toolboxes.ansatz_generator.penalty_terms import combined_penalty
 from tangelo.toolboxes.post_processing.bootstrapping import get_resampled_frequencies
 from tangelo.toolboxes.ansatz_generator.fermionic_operators import number_operator, spinz_operator, spin2_operator
@@ -45,6 +45,7 @@ class BuiltInAnsatze(Enum):
     QMF = 5
     QCC = 6
     VSQS = 7
+    SymmetricHEA = 8
 
 
 class VQESolver:
@@ -183,17 +184,21 @@ class VQESolver:
                     self.ansatz = QCC(self.molecule, self.qubit_mapping, self.up_then_down, **self.ansatz_options)
                 elif self.ansatz == BuiltInAnsatze.VSQS:
                     self.ansatz = VSQS(self.molecule, self.qubit_mapping, self.up_then_down, **self.ansatz_options)
+                elif self.ansatz == BuiltInAnsatze.SymmetricHEA:
+                    self.ansatz = SymmetricHEA(self.molecule, self.qubit_mapping, self.up_then_down, **self.ansatz_options)
                 else:
                     raise ValueError(f"Unsupported ansatz. Built-in ansatze:\n\t{self.builtin_ansatze}")
             elif not isinstance(self.ansatz, Ansatz):
                 raise TypeError(f"Invalid ansatz dataype. Expecting instance of Ansatz class, or one of built-in options:\n\t{self.builtin_ansatze}")
 
         # Building with a qubit Hamiltonian.
-        elif self.ansatz in [BuiltInAnsatze.HEA, BuiltInAnsatze.VSQS]:
+        elif self.ansatz in [BuiltInAnsatze.HEA, BuiltInAnsatze.VSQS, BuiltInAnsatze.SymmetricHEA]:
             if self.ansatz == BuiltInAnsatze.HEA:
                 self.ansatz = HEA(self.molecule, self.qubit_mapping, self.up_then_down, **self.ansatz_options)
             elif self.ansatz == BuiltInAnsatze.VSQS:
                 self.ansatz = VSQS(self.molecule, self.qubit_mapping, self.up_then_down, **self.ansatz_options)
+            elif self.ansatz == BuiltInAnsatze.SymmetricHEA:
+                self.ansatz = SymmetricHEA(self.molecule, self.qubit_mapping, self.up_then_down, **self.ansatz_options)
         elif not isinstance(self.ansatz, Ansatz):
             raise TypeError(f"Invalid ansatz dataype. Expecting a custom Ansatz (Ansatz class).")
 

@@ -20,4 +20,5 @@ from .adapt_ansatz import ADAPTAnsatz
 from .rucc import RUCC
 from .upccgsd import UpCCGSD
 from .hea import HEA
+from .symhea import SymmetricHEA
 from .variational_circuit import VariationalCircuitAnsatz

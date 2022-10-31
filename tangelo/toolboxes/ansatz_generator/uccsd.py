@@ -40,6 +40,7 @@ from .ansatz_utils import exp_pauliword_to_gates
 from ._unitary_cc_openshell import uccsd_openshell_paramsize, uccsd_openshell_generator
 from tangelo.toolboxes.qubit_mappings.mapping_transform import fermion_to_qubit_mapping
 from tangelo.toolboxes.qubit_mappings.statevector_mapping import get_reference_circuit
+from tangelo.toolboxes.ansatz_generator.ansatz_utils import optimal_ordering_pauli_terms
 
 
 class UCCSD(Ansatz):
@@ -167,7 +168,8 @@ class UCCSD(Ansatz):
 
         # Obtain quantum circuit through trivial trotterization of the qubit operator
         # Keep track of the order in which pauli words have been visited for fast subsequent parameter updates
-        pauli_words = sorted(qubit_op.terms.items(), key=lambda x: len(x[0]))
+        #pauli_words = sorted(qubit_op.terms.items(), key=lambda x: len(x[0]))
+        pauli_words = optimal_ordering_pauli_terms(qubit_op)
         pauli_words_gates = []
         self.pauli_to_angles_mapping = dict()
         for i, (pauli_word, coef) in enumerate(pauli_words):

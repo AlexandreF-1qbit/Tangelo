@@ -28,7 +28,7 @@ from openfermion.ops import QubitOperator as ofQubitOperator
 from tangelo.linq import Circuit, Gate
 from tangelo.toolboxes.operators import FermionOperator, QubitOperator
 from tangelo.toolboxes.qubit_mappings.mapping_transform import fermion_to_qubit_mapping, get_fermion_operator
-
+from tangelo.toolboxes.operators import count_qubits
 
 def pauli_op_to_gate(index, op, inverse=False):
     """Return the change-of-basis gates required to map pauli words to quantum
@@ -438,3 +438,50 @@ def givens_gate(target, theta, is_variational=False):
     return [Gate("CNOT", target=target[0], control=target[1]),
             Gate("CRY", target=target[1], control=target[0], parameter=-theta, is_variational=is_variational),
             Gate("CNOT", target=target[0], control=target[1])]
+
+
+def optimal_ordering_pauli_terms(qubit_op):
+    import dqs # https://github.com/teaguetomesh/dqs-term-grouping.git
+    rng = np.random.default_rng()
+
+    def to_qiskit_list(H, n_qubits):
+        H_list = list()
+        for term_tuple, coeff in H.terms.items():
+            term_string = str()
+            term_dict = dict((x, y) for x, y in term_tuple)
+            for n in range(n_qubits):
+                term_string += term_dict.get(n, "I")
+            term_string = term_string[::-1]
+            H_list += [(coeff, term_string)]
+
+        return H_list
+
+    def to_of_list(H_list):
+        H_items = list()
+        for coeff, term_string in H_list:
+            term_list = list()
+            for qubit_i, pauli in enumerate(term_string[::-1]):
+                if pauli != "I":
+                    term_list += [(qubit_i, pauli)]
+            term_tuple = tuple(term_list)
+            H_items.append((term_tuple, coeff))
+        return H_items
+
+    n_qubits = count_qubits(qubit_op)
+    H_list = to_qiskit_list(qubit_op, n_qubits)
+
+    max_commute_H = dqs.term_grouping.findMinCliqueCover(
+        rng.permutation(H_list),    # Random permutation of the list
+        n_qubits,                   # Self-explanatory
+        "QWC",                       # General commutativity for finding cliques
+        "boppana",                  # Select the function to find the MIN-CLIQUE-COVER -> Options are: boppana, bronk
+        gate_cancellation=True,
+        print_info=True,
+        mode="star",                # star vs ladder to compute distances
+    )
+
+    flat_max_commute_H = [pauli_word for clique in max_commute_H for pauli_word in clique]
+
+    ordered_list = to_of_list(flat_max_commute_H)
+
+    return ordered_list

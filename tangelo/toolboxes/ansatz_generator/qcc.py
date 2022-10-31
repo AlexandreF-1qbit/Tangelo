@@ -45,7 +45,7 @@ from tangelo.toolboxes.ansatz_generator.ansatz import Ansatz
 from tangelo.toolboxes.ansatz_generator.ansatz_utils import exp_pauliword_to_gates
 from tangelo.toolboxes.ansatz_generator._qubit_mf import init_qmf_from_hf, get_qmf_circuit, purify_qmf_state
 from tangelo.toolboxes.ansatz_generator._qubit_cc import build_qcc_qubit_op, construct_dis
-
+from tangelo.toolboxes.ansatz_generator.ansatz_utils import optimal_ordering_pauli_terms
 
 class QCC(Ansatz):
     """This class implements the QCC ansatz. Closed-shell and restricted open-shell QCC are
@@ -219,7 +219,8 @@ class QCC(Ansatz):
         # Obtain quantum circuit through trivial trotterization of the qubit operator
         # Track the order in which pauli words have been visited for fast parameter updates
         pauli_words_gates = []
-        pauli_words = sorted(qubit_op.terms.items(), key=lambda x: len(x[0]))
+        #pauli_words = sorted(qubit_op.terms.items(), key=lambda x: len(x[0]))
+        pauli_words = optimal_ordering_pauli_terms(qubit_op)
         for i, (pauli_word, coef) in enumerate(pauli_words):
             pauli_words_gates += exp_pauliword_to_gates(pauli_word, coef)
             self.pauli_to_angles_mapping[pauli_word] = i

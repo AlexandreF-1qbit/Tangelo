@@ -222,7 +222,7 @@ class QCC(Ansatz):
         #pauli_words = sorted(qubit_op.terms.items(), key=lambda x: len(x[0]))
         pauli_words = optimal_ordering_pauli_terms(qubit_op)
         for i, (pauli_word, coef) in enumerate(pauli_words):
-            pauli_words_gates += exp_pauliword_to_gates(pauli_word, coef)
+            pauli_words_gates += exp_pauliword_to_gates(pauli_word, coef, cnot_stairs=False)
             self.pauli_to_angles_mapping[pauli_word] = i
         self.qcc_circuit = Circuit(pauli_words_gates)
         self.circuit = self.qmf_circuit + self.qcc_circuit if self.qmf_circuit.size != 0\

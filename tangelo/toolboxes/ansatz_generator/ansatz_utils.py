@@ -41,7 +41,7 @@ def pauli_op_to_gate(index, op, inverse=False):
         return gate if not inverse else gate.inverse()
 
 
-def exp_pauliword_to_gates(pauli_word, coef, variational=True, control=None):
+def exp_pauliword_to_gates(pauli_word, coef, variational=True, control=None, cnot_stairs=True):
     """Generate a list of Gate objects corresponding to the exponential of a pauli word.
     The process is described in Whitfield 2010 https://arxiv.org/pdf/1001.3855.pdf
 
@@ -50,31 +50,40 @@ def exp_pauliword_to_gates(pauli_word, coef, variational=True, control=None):
         coef (float): The coefficient in the exponentiation
         variational (bool): When creating the Gate objects, label the (controlled-)Rz gate as variational
         control (integer): The control qubit label
+        cnot_stairs (bool): Implement with CNOT stairs or not (CNOTs to the same
+            qubit).
 
     Returns:
         list: list of Gate objects that represents the exponentiation of the pauli word.
     """
     gates = []
 
-    # Before CNOT ladder
+    # Before CNOTs.
     for index, op in pauli_word:
         if op in {"X", "Y"}:
             gates += [pauli_op_to_gate(index, op, inverse=False)]
 
-    # CNOT ladder and rotation
-    indices = sorted([index for index, op in pauli_word])
-    cnot_ladder_gates = [Gate("CNOT", target=pair[1], control=pair[0]) for pair in zip(indices[:-1], indices[1:])]
-    gates += cnot_ladder_gates
+    indices = sorted([index for index, _ in pauli_word])
 
+    if cnot_stairs:
+        # CNOT ladder .
+        cnot_gates = [Gate("CNOT", target=t, control=c) for c, t in zip(indices[:-1], indices[1:])]
+        gates += cnot_gates
+    else:
+        # CNOTs to the same qubit.
+        cnot_gates = [Gate("CNOT", target=indices[-1], control=c) for c in indices[:-1]]
+        gates += cnot_gates
+
+    # Rotation.
     angle = 2.*coef if coef >= 0. else 4*np.pi+2*coef
     if control is None:
         gates += [Gate("RZ", target=indices[-1], parameter=angle, is_variational=variational)]
     else:
         gates += [Gate("CRZ", target=indices[-1], control=control, parameter=angle)]
 
-    gates += cnot_ladder_gates[::-1]
+    gates += cnot_gates[::-1]
 
-    # After CNOT ladder
+    # After CNOTs.
     for index, op in pauli_word[::-1]:
         if op in {"X", "Y"}:
             gates += [pauli_op_to_gate(index, op, inverse=True)]
@@ -83,7 +92,7 @@ def exp_pauliword_to_gates(pauli_word, coef, variational=True, control=None):
 
 
 def get_exponentiated_qubit_operator_circuit(qubit_op, time=1., variational=False, trotter_order=1, control=None,
-                                             return_phase=False, pauli_order=None):
+                                             return_phase=False, pauli_order=None, cnot_stairs=True):
     """Generate the exponentiation of a qubit operator in first- or second-order Trotterized form.
     The algorithm is described in Whitfield 2010 https://arxiv.org/pdf/1001.3855.pdf
 
@@ -97,6 +106,8 @@ def get_exponentiated_qubit_operator_circuit(qubit_op, time=1., variational=Fals
         pauli_order (list): The desired pauli_word order for trotterization defined as a list of (pauli_word, coeff)
             elements which have matching dictionary elements pauli_word: coeff in QubitOperator terms.items().
             The coeff in pauli_order is used to generate the exponential.
+        cnot_stairs (bool): Implement with CNOT stairs or not (CNOTs to the same
+            qubit).
 
     Returns:
         Circuit: circuit corresponding to exponentiation of qubit operator
@@ -131,7 +142,8 @@ def get_exponentiated_qubit_operator_circuit(qubit_op, time=1., variational=Fals
                 exp_pauli_word_gates += exp_pauliword_to_gates(pauli_word,
                                                                np.real(coef),
                                                                variational=variational,
-                                                               control=control)
+                                                               control=control,
+                                                               cnot_stairs=cnot_stairs)
         else:
             if control is None:
                 phase *= np.exp(-1j * np.real(coef))
@@ -469,11 +481,12 @@ def optimal_ordering_pauli_terms(qubit_op):
 
     n_qubits = count_qubits(qubit_op)
     H_list = to_qiskit_list(qubit_op, n_qubits)
+    print(H_list)
 
     max_commute_H = dqs.term_grouping.findMinCliqueCover(
         rng.permutation(H_list),    # Random permutation of the list
         n_qubits,                   # Self-explanatory
-        "QWC",                       # General commutativity for finding cliques
+        "GC",                       # GGC or QWC (communtativity)
         "boppana",                  # Select the function to find the MIN-CLIQUE-COVER -> Options are: boppana, bronk
         gate_cancellation=True,
         print_info=True,
@@ -481,7 +494,7 @@ def optimal_ordering_pauli_terms(qubit_op):
     )
 
     flat_max_commute_H = [pauli_word for clique in max_commute_H for pauli_word in clique]
-
+    print(flat_max_commute_H)
     ordered_list = to_of_list(flat_max_commute_H)
 
     return ordered_list

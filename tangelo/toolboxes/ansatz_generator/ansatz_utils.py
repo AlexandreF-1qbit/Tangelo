@@ -468,7 +468,7 @@ def optimal_ordering_pauli_terms(qubit_op):
             for n in range(n_qubits):
                 term_string += term_dict.get(n, "I")
             term_string = term_string[::-1]
-            H_list += [(coeff, term_string)]
+            H_list += [(coeff.real, term_string)]
 
         return H_list
 

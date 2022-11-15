@@ -68,11 +68,11 @@ def exp_pauliword_to_gates(pauli_word, coef, variational=True, control=None, cno
     if cnot_stairs:
         # CNOT ladder .
         cnot_gates = [Gate("CNOT", target=t, control=c) for c, t in zip(indices[:-1], indices[1:])]
-        gates += cnot_gates
     else:
         # CNOTs to the same qubit.
         cnot_gates = [Gate("CNOT", target=indices[-1], control=c) for c in indices[:-1]]
-        gates += cnot_gates
+
+    gates += cnot_gates
 
     # Rotation.
     angle = 2.*coef if coef >= 0. else 4*np.pi+2*coef
@@ -485,7 +485,6 @@ def optimal_ordering_pauli_terms(qubit_op):
 
     n_qubits = count_qubits(qubit_op)
     H_list = to_qiskit_list(qubit_op, n_qubits)
-    print(H_list)
 
     max_commute_H = dqs.term_grouping.findMinCliqueCover(
         rng.permutation(H_list),    # Random permutation of the list
@@ -498,7 +497,7 @@ def optimal_ordering_pauli_terms(qubit_op):
     )
 
     flat_max_commute_H = [pauli_word for clique in max_commute_H for pauli_word in clique]
-    print(flat_max_commute_H)
+
     ordered_list = to_of_list(flat_max_commute_H)
 
     return ordered_list

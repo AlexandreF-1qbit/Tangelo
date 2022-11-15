@@ -79,7 +79,7 @@ def exp_pauliword_to_gates(pauli_word, coef, variational=True, control=None, cno
     if control is None:
         gates += [Gate("RZ", target=indices[-1], parameter=angle, is_variational=variational)]
     else:
-        gates += [Gate("CRZ", target=indices[-1], control=control, parameter=angle)]
+        gates += [Gate("CRZ", target=indices[-1], control=control, parameter=angle, is_variational=variational)]
 
     gates += cnot_gates[::-1]
 
@@ -148,7 +148,11 @@ def get_exponentiated_qubit_operator_circuit(qubit_op, time=1., variational=Fals
             if control is None:
                 phase *= np.exp(-1j * np.real(coef))
             else:
-                exp_pauli_word_gates += [Gate("PHASE", target=control, parameter=-np.real(coef))]
+                if isinstance(control, int) or len(control) == 1:
+                    exp_pauli_word_gates += [Gate("PHASE", target=control, parameter=-np.real(coef), is_variational=variational)]
+                else:
+                    exp_pauli_word_gates += [Gate("CPHASE", target=0, control=control, parameter=-2*np.real(coef), is_variational=variational)]
+                    exp_pauli_word_gates += [Gate("CRZ", target=0, control=control, parameter=2*np.real(coef), is_variational=variational)]
 
     return_value = (Circuit(exp_pauli_word_gates), phase) if return_phase else Circuit(exp_pauli_word_gates)
     return return_value

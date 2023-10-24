@@ -210,9 +210,9 @@ class Circuit:
         n_qubit = len(g.target) if (g.control is None) else len(g.target) + len(g.control)
         self._n_qubit_gate_counts[n_qubit] = self._n_qubit_gate_counts.get(n_qubit, 0) + 1
 
-    def depth(self):
-        """ Return the depth of the quantum circuit, by computing the number of moments. Does not count
-        qubit initialization as a moment (unlike Cirq, for example). Compute from scratch.
+    def compute_moments(self):
+        """ Return the list of moments of the quantum circuit. Does not count
+        qubit initialization as a moment (unlike Cirq, for example).
         """
         # List of qubit indices involved in each moment. Look up dict for latest moment for each index.
         moments = list()
@@ -240,7 +240,13 @@ class Circuit:
                 # Case 2: Gate is part of a new moment
                 else:
                     moments.append(qubits)
-        return len(moments)
+        return moments
+
+    def depth(self):
+        """ Return the depth of the quantum circuit, by computing the number of moments. Does not count
+        qubit initialization as a moment (unlike Cirq, for example). Compute from scratch.
+        """
+        return len(self.compute_moments())
 
     def trim_qubits(self):
         """Trim unnecessary qubits and update indices with the lowest values possible.

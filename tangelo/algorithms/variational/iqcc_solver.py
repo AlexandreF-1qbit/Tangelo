@@ -37,6 +37,8 @@ from tangelo.toolboxes.ansatz_generator.qcc import QCC
 from tangelo.algorithms.variational.vqe_solver import VQESolver, BuiltInAnsatze
 from tangelo.toolboxes.ansatz_generator._qubit_cc import qcc_op_dress
 
+from tangelo.linq.helpers.circuits.measurement_basis import pauli_of_to_string
+
 
 class iQCC_solver:
     """The iQCC-VQE solver class combines the QCC ansatz and VQESolver classes
@@ -150,6 +152,11 @@ class iQCC_solver:
 
         self.qcc_ansatz = self.vqe_solver.ansatz
 
+        self.data = [
+            ["n_it", "op", "opt_param", "len_hamiltonian", "energy"],
+            [0, "", None, len(self.vqe_solver.qubit_hamiltonian.terms), self.molecule.mf_energy]
+        ]
+
     def simulate(self):
         """Executes the iQCC-VQE algorithm. During each iteration,
         QCC-VQE minimization is performed."""
@@ -254,6 +261,10 @@ class iQCC_solver:
             pos = n_qcc_params - 1 - self.qcc_ansatz.pauli_to_angles_mapping[pauli]
             ordered_dis[pos] = qu_gen
             ordered_params[pos] = -optimal_qcc_var_params[i]
+
+        self.data.append(
+            [self.iteration, pauli_of_to_string(list(ordered_dis[0].terms.keys())[0], n_qubits), ordered_params, len(self.qcc_ansatz.qubit_ham.terms), self.vqe_solver.optimal_energy]
+        )
 
         self.qcc_ansatz.qubit_ham = qcc_op_dress(self.qcc_ansatz.qubit_ham, ordered_dis,
                                                  ordered_params)
